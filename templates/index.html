@@ -1,0 +1,1014 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staircase point builder</title>
+  <style>
+    :root {
+      --panel-bg: rgba(15, 23, 42, 0.9);
+      --border-color: rgba(148, 163, 184, 0.2);
+      --muted-text: rgba(226, 232, 240, 0.75);
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(180deg, #020617, #0f172a 60%, #020617);
+      color: #f1f5f9;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(2, 6, 23, 0.85);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    header h1 {
+      font-size: 1.9rem;
+      margin: 0;
+    }
+    .switches-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .language-switch {
+      margin-top: 0;
+      display: inline-flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .unit-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .switches-row span {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted-text);
+    }
+    .language-switch button,
+    .unit-switch button {
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .language-switch button.active,
+    .unit-switch button.active {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: transparent;
+      box-shadow: 0 8px 16px rgba(56, 189, 248, 0.35);
+    }
+    main {
+      padding: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 1.25rem;
+      flex: 1 1 320px;
+      box-shadow: 0 15px 35px rgba(2, 6, 23, 0.7);
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    label {
+      font-size: 0.95rem;
+    }
+    input[type=number] {
+      width: 100%;
+      padding: 0.65rem;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: #0f172a;
+      color: inherit;
+      font-size: 1rem;
+      margin-top: 0.35rem;
+    }
+    button {
+      padding: 0.7rem 1.4rem;
+      border-radius: 0.6rem;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    button[type=submit] {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    button[type=button] {
+      background: rgba(148, 163, 184, 0.35);
+      color: #f1f5f9;
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem;
+      align-items: center;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 600;
+    }
+    #point-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    #point-list li {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.9rem;
+    }
+    #point-list button {
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.45rem;
+      background: rgba(248, 113, 113, 0.9);
+      color: #fff;
+      border: none;
+    }
+    canvas {
+      width: 100%;
+      height: 320px;
+      border-radius: 0.8rem;
+      border: 2px solid rgba(148, 163, 184, 0.5);
+      background: rgba(2, 6, 23, 0.95);
+    }
+    .hint {
+      margin-top: 0.6rem;
+      font-size: 0.9rem;
+      color: rgba(226, 232, 240, 0.75);
+    }
+    .preview-canvas-wrapper {
+      position: relative;
+    }
+    .stair-notes {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      left: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      background: rgba(2, 6, 23, 0.85);
+      border-radius: 0.9rem;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 0.9rem;
+      box-shadow: 0 10px 30px rgba(2, 6, 23, 0.9);
+      pointer-events: none;
+    }
+    .stair-notes .notes-label {
+      margin: 0 0 0.25rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted-text);
+    }
+    .stair-notes ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .stair-notes li {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.5rem;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: #e2e8f0;
+    }
+    .stair-notes .note-positive {
+      border-color: rgba(34, 197, 94, 0.6);
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .stair-notes .note-negative {
+      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba(248, 113, 113, 0.08);
+    }
+    .stair-notes .note-empty {
+      border-color: rgba(148, 163, 184, 0.25);
+      font-style: italic;
+    }
+    @media (max-width: 720px) {
+      .panel {
+      flex: 1 1 100%;
+    }
+    .total-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0 0.5rem;
+    }
+    .total-controls label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+      color: var(--muted-text);
+    }
+    .total-controls input {
+      margin-top: 0.35rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: #020617;
+      color: #f1f5f9;
+    }
+    .total-controls button {
+      margin-top: 0.35rem;
+      border-radius: 0.65rem;
+      border: none;
+      padding: 0.7rem 1.4rem;
+      font-weight: 600;
+      background: #38bdf8;
+      color: #0f172a;
+      cursor: pointer;
+      width: fit-content;
+    }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n-key="headerTitle">Staircase point builder</h1>
+    <div class="switches-row">
+      <div class="language-switch" role="group" aria-label="Language switch">
+        <button type="button" data-lang-btn="en" class="active">English</button>
+        <button type="button" data-lang-btn="es">Castellano</button>
+      </div>
+      <div class="unit-switch" role="group" aria-label="Measurement units">
+        <span data-i18n-key="unitLabel">Units:</span>
+        <button type="button" data-unit-btn="cm" class="active">cm</button>
+        <button type="button" data-unit-btn="mm">mm</button>
+        <button type="button" data-unit-btn="in">in</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <h2 data-i18n-key="stepTitle">Step points</h2>
+      <p data-i18n-key="stepSubtitle">Record each step's run and rise to start sketching the staircase profile.</p>
+      <form id="point-form">
+        <label>
+          <span data-i18n-key="runLabel">Step run (length)</span>
+          <input type="number" name="length" step="0.1" min="0.1" placeholder="24" required data-i18n-placeholder="runPlaceholder">
+        </label>
+        <label>
+          <span data-i18n-key="riseLabel">Step rise (height)</span>
+          <input type="number" name="height" step="0.1" min="0.1" placeholder="7" required data-i18n-placeholder="risePlaceholder">
+        </label>
+        <div>
+          <button type="submit" data-i18n-key="addButton">Add point</button>
+          <button type="button" id="reset-points" data-i18n-key="resetButton">Reset all</button>
+          <button type="button" id="add-last-step" data-i18n-key="addLastStepButton">Add last step</button>
+        </div>
+      </form>
+      <p class="status" id="status"></p>
+      <div class="summary">
+        <div class="summary-item">
+          <span data-i18n-key="totalRunLabel">Total run:</span>
+          <strong id="total-length">0</strong>
+        </div>
+        <div class="summary-item">
+          <span data-i18n-key="totalRiseLabel">Total rise:</span>
+          <strong id="total-height">0</strong>
+        </div>
+        <div class="summary-item">
+          <span data-i18n-key="stepCountLabel">Steps:</span>
+          <strong id="step-count">0</strong>
+        </div>
+      </div>
+      <div class="total-controls">
+        <label>
+          <span data-i18n-key="totalRunInputLabel">Set total run</span>
+          <input type="number" id="target-run" step="0.1" min="0" placeholder="100" data-i18n-placeholder="totalRunInputPlaceholder">
+        </label>
+        <label>
+          <span data-i18n-key="totalRiseInputLabel">Set total rise</span>
+          <input type="number" id="target-rise" step="0.1" min="0" placeholder="60" data-i18n-placeholder="totalRiseInputPlaceholder">
+        </label>
+        <label>
+          <span data-i18n-key="landingBottomLabel">Bottom landing run</span>
+          <input type="number" id="landing-bottom" step="0.1" min="0" placeholder="16" data-i18n-placeholder="landingBottomPlaceholder">
+        </label>
+        <label>
+          <span data-i18n-key="landingTopLabel">Top landing run</span>
+          <input type="number" id="landing-top" step="0.1" min="0" placeholder="16" data-i18n-placeholder="landingTopPlaceholder">
+        </label>
+        <div>
+          <button type="button" id="apply-totals" data-i18n-key="applyTotalsButton">Set totals</button>
+        </div>
+      </div>
+      <ul id="point-list"></ul>
+    </section>
+    <section class="panel">
+      <h2 data-i18n-key="previewTitle">Preview</h2>
+      <div class="preview-canvas-wrapper">
+        <canvas id="stair-canvas" width="780" height="360"></canvas>
+        <div class="stair-notes" aria-live="polite">
+          <div>
+            <p class="notes-label" data-i18n-key="notesPositiveLabel">Positive notes</p>
+            <ul id="positive-notes"></ul>
+          </div>
+          <div>
+            <p class="notes-label" data-i18n-key="notesNegativeLabel">Concerns</p>
+            <ul id="negative-notes"></ul>
+          </div>
+        </div>
+      </div>
+      <p class="hint" data-i18n-key="previewHint">The preview scales your run and rise values. Add or remove points to tweak the staircase shape.</p>
+    </section>
+  </main>
+  <script>
+    const translations = {
+      en: {
+        headerTitle: "Staircase point builder",
+        stepTitle: "Step points",
+        stepSubtitle: "Record each step's run and rise to start sketching the staircase profile.",
+        runLabel: "Step run (length)",
+        riseLabel: "Step rise (height)",
+        runPlaceholder: "24",
+        risePlaceholder: "7",
+        addButton: "Add point",
+        resetButton: "Reset all",
+        addLastStepButton: "Add last step",
+        totalRunInputLabel: "Set total run",
+        totalRiseInputLabel: "Set total rise",
+        totalRunInputPlaceholder: "100",
+        totalRiseInputPlaceholder: "60",
+        landingBottomLabel: "Bottom landing run",
+        landingTopLabel: "Top landing run",
+        landingBottomPlaceholder: "16",
+        landingTopPlaceholder: "16",
+        totalRunLabel: "Total run:",
+        totalRiseLabel: "Total rise:",
+        stepCountLabel: "Steps:",
+        previewTitle: "Preview",
+        previewHint: "The preview scales your run and rise values. Add or remove points to tweak the staircase shape.",
+        notesPositiveLabel: "Positive notes",
+        notesNegativeLabel: "Concerns",
+        notesNoData: "Add at least one step to get feedback on the stair.",
+        canvasEmpty: "Add at least one point to preview the staircase.",
+        pointLabels: {
+          run: "Run",
+          rise: "Rise"
+        },
+        unitLabel: "Units:",
+        removeButton: "Remove",
+        status: {
+          loadErrorPrefix: "Unable to load points:",
+          pointAdded: "Point added",
+          pointRemoved: "Point removed",
+          pointsCleared: "Points cleared",
+          nothingToReset: "Nothing to reset",
+          resetFailurePrefix: "Failed to reset points:",
+          noPreviousStep: "No previous step to repeat",
+          totalsApplied: "Totals updated",
+          invalidTotals: "Enter at least one positive target",
+          noPointsForTotals: "Add steps before setting totals",
+          removeError: "Could not remove point",
+          addError: "Could not add point"
+        }
+      },
+      es: {
+        headerTitle: "Constructor de escaleras",
+        stepTitle: "Puntos del escalón",
+        stepSubtitle: "Registra el recorrido y la altura de cada escalón para empezar a dibujar el perfil de la escalera.",
+        runLabel: "Recorrido del escalón (largo)",
+        riseLabel: "Altura del escalón",
+        runPlaceholder: "24",
+        risePlaceholder: "7",
+        addButton: "Agregar punto",
+        resetButton: "Reiniciar todo",
+        addLastStepButton: "Repetir último escalón",
+        totalRunInputLabel: "Definir recorrido total",
+        totalRiseInputLabel: "Definir altura total",
+        totalRunInputPlaceholder: "100",
+        totalRiseInputPlaceholder: "60",
+        totalRunLabel: "Recorrido total:",
+        totalRiseLabel: "Altura total:",
+        stepCountLabel: "Escalones:",
+        previewTitle: "Previsualización",
+        previewHint: "La vista previa escala los valores de recorrido y altura. Añade o elimina puntos para ajustar la forma.",
+        notesPositiveLabel: "Notas positivas",
+        notesNegativeLabel: "Observaciones",
+        notesNoData: "Agrega al menos un escalón para recibir comentarios.",
+        canvasEmpty: "Agrega al menos un punto para ver la escalera.",
+        pointLabels: {
+          run: "Recorrido",
+          rise: "Altura"
+        },
+        unitLabel: "Unidades:",
+        removeButton: "Eliminar",
+        status: {
+          loadErrorPrefix: "No se pudieron cargar los puntos:",
+          pointAdded: "Punto añadido",
+          pointRemoved: "Punto eliminado",
+          pointsCleared: "Puntos borrados",
+          nothingToReset: "Nada que reiniciar",
+          resetFailurePrefix: "Error al reiniciar los puntos:",
+          noPreviousStep: "No hay escalón anterior para repetir",
+          totalsApplied: "Totales actualizados",
+          invalidTotals: "Ingresa al menos un objetivo válido",
+          noPointsForTotals: "Añade escalones antes de fijar totales",
+          removeError: "No se pudo eliminar el punto",
+          addError: "No se pudo agregar el punto"
+        }
+      }
+    };
+
+    const unitConfig = {
+      cm: { label: "cm", factor: 10 },
+      mm: { label: "mm", factor: 1 },
+      in: { label: "in", factor: 25.4 }
+    };
+
+    const comfortThresholds = {
+      run: { min: 250, max: 320 },
+      rise: { min: 160, max: 190 }
+    };
+
+    const notePhrases = {
+      positive: {
+        runComfort: (value, unit, lang) =>
+          lang === "es"
+            ? `El recorrido promedio (~${value.toFixed(1)} ${unit}) se siente equilibrado.`
+            : `Average run (~${value.toFixed(1)} ${unit}) feels balanced underfoot.`,
+        riseComfort: (value, unit, lang) =>
+          lang === "es"
+            ? `La altura promedio (~${value.toFixed(1)} ${unit}) mantiene el ascenso constante.`
+            : `Average rise (~${value.toFixed(1)} ${unit}) keeps the climb steady.`,
+        landings: (bottom, top, unit, lang, labels) => {
+          if (bottom && top) {
+            return lang === "es"
+              ? `${labels.bottom} (~${bottom.toFixed(1)} ${unit}) y ${labels.top} (~${top.toFixed(1)} ${unit}) aportan transiciones suaves.`
+              : `${labels.bottom} (~${bottom.toFixed(1)} ${unit}) and ${labels.top} (~${top.toFixed(1)} ${unit}) help ground the entry and exit.`;
+          }
+          if (bottom) {
+            return lang === "es"
+              ? `${labels.bottom} (~${bottom.toFixed(1)} ${unit}) aporta un descanso estable.`
+              : `${labels.bottom} (~${bottom.toFixed(1)} ${unit}) gives a calm approach.`;
+          }
+          if (top) {
+            return lang === "es"
+              ? `${labels.top} (~${top.toFixed(1)} ${unit}) ofrece una salida cómoda.`
+              : `${labels.top} (~${top.toFixed(1)} ${unit}) provides a comfortable exit.`;
+          }
+          return lang === "es"
+            ? "Define aterrizajes para suavizar las transiciones."
+            : "Define landings to soften the transitions.";
+        }
+      },
+      negative: {
+        runShort: (value, unit, lang) =>
+          lang === "es"
+            ? `Recorrido (~${value.toFixed(1)} ${unit}) algo estrecho; podría sentirse apretado.`
+            : `Run (~${value.toFixed(1)} ${unit}) is tight; steps may feel cramped.`,
+        runLong: (value, unit, lang) =>
+          lang === "es"
+            ? `Recorrido (~${value.toFixed(1)} ${unit}) algo largo; la escalera podría sentirse muy extendida.`
+            : `Run (~${value.toFixed(1)} ${unit}) is wide; the staircase may feel stretched.`,
+        riseShallow: (value, unit, lang) =>
+          lang === "es"
+            ? `Altura (~${value.toFixed(1)} ${unit}) baja; los escalones pueden parecer planos.`
+            : `Rise (~${value.toFixed(1)} ${unit}) is shallow; steps might feel flat.`,
+        riseTall: (value, unit, lang) =>
+          lang === "es"
+            ? `Altura (~${value.toFixed(1)} ${unit}) alta; la subida puede sentirse empinada.`
+            : `Rise (~${value.toFixed(1)} ${unit}) is tall; the climb may feel steep.`,
+        landingsMissing: (labels, lang) => {
+          const joiner = lang === "es" ? " y " : " and ";
+          return lang === "es"
+            ? `Agrega ${labels.join(joiner)} para transiciones más suaves.`
+            : `Add ${labels.join(joiner)} for smoother transitions.`;
+        }
+      }
+    };
+
+    const apiBase = "/api/points";
+    const canvas = document.getElementById("stair-canvas");
+    const ctx = canvas.getContext("2d");
+    const listEl = document.getElementById("point-list");
+    const totalLengthEl = document.getElementById("total-length");
+    const totalHeightEl = document.getElementById("total-height");
+    const stepCountEl = document.getElementById("step-count");
+    const statusEl = document.getElementById("status");
+    const form = document.getElementById("point-form");
+    const resetBtn = document.getElementById("reset-points");
+    const addLastStepBtn = document.getElementById("add-last-step");
+    const targetRunInput = document.getElementById("target-run");
+    const targetRiseInput = document.getElementById("target-rise");
+    const applyTotalsBtn = document.getElementById("apply-totals");
+    const landingBottomInput = document.getElementById("landing-bottom");
+    const landingTopInput = document.getElementById("landing-top");
+    const positiveNotesList = document.getElementById("positive-notes");
+    const negativeNotesList = document.getElementById("negative-notes");
+    const canvasHeight = 320;
+    const languageButtons = document.querySelectorAll("[data-lang-btn]");
+    const unitButtons = document.querySelectorAll("[data-unit-btn]");
+    let points = [];
+    let currentLang = "en";
+    let currentUnit = "cm";
+    let lastLandingRuns = { bottom: 0, top: 0 };
+    let lastTotalRun = 0;
+    let lastTotalRise = 0;
+
+    function adjustCanvasSize() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvasHeight;
+    }
+
+    function getActiveUnitKey() {
+      return unitConfig[currentUnit] ? currentUnit : "cm";
+    }
+
+    function getUnitLabel() {
+      return unitConfig[getActiveUnitKey()].label;
+    }
+
+    function convertToBase(value) {
+      const key = getActiveUnitKey();
+      return value * unitConfig[key].factor;
+    }
+
+    function convertFromBase(value) {
+      const key = getActiveUnitKey();
+      return value / unitConfig[key].factor;
+    }
+
+    function updateUnitButtons() {
+      const activeUnit = getActiveUnitKey();
+      unitButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.unitBtn === activeUnit);
+      });
+    }
+
+    function refreshPlaceholders() {
+      const unitLabel = getUnitLabel();
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        const translation = translations[currentLang][el.dataset.i18nPlaceholder];
+        if (translation) {
+          el.placeholder = `${translation} ${unitLabel}`;
+        }
+      });
+    }
+
+    function handleUnitChange(unit) {
+      if (unit === currentUnit) {
+        return;
+      }
+      currentUnit = unit;
+      updateUnitButtons();
+      refreshPlaceholders();
+      updateUI();
+    }
+
+    function showStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? "#fca5a5" : "#a5f3fc";
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang === "es" ? "es" : "en";
+      document.querySelectorAll("[data-i18n-key]").forEach((el) => {
+        const translation = translations[lang][el.dataset.i18nKey];
+        if (translation) {
+          el.textContent = translation;
+        }
+      });
+      refreshPlaceholders();
+      languageButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.langBtn === lang);
+      });
+      updateUnitButtons();
+      updateUI();
+    }
+
+    function parseLandingInput(input) {
+      const value = parseFloat(input?.value);
+      return Number.isFinite(value) && value > 0 ? convertToBase(value) : 0;
+    }
+
+    function getLandingRuns() {
+      return {
+        bottom: parseLandingInput(landingBottomInput),
+        top: parseLandingInput(landingTopInput)
+      };
+    }
+
+    function buildNoteList(listEl, items) {
+      listEl.innerHTML = "";
+      if (!items.length) {
+        const empty = document.createElement("li");
+        empty.className = "note-empty";
+        empty.textContent = "—";
+        listEl.appendChild(empty);
+        return;
+      }
+      items.forEach(({ text, className }) => {
+        const li = document.createElement("li");
+        li.textContent = text;
+        if (className) {
+          li.classList.add(className);
+        }
+        listEl.appendChild(li);
+      });
+    }
+
+    function updateNotes(landingRuns, totalRun, totalRise) {
+      const positives = [];
+      const negatives = [];
+      const lang = currentLang;
+      const unitLabel = getUnitLabel();
+      if (!points.length) {
+        const emptyMessage = translations[lang].notesNoData;
+        positives.push({ text: emptyMessage, className: "note-empty" });
+        negatives.push({ text: emptyMessage, className: "note-empty" });
+        buildNoteList(positiveNotesList, positives);
+        buildNoteList(negativeNotesList, negatives);
+        return;
+      }
+      const avgRunBase = totalRun / points.length;
+      const avgRiseBase = totalRise / points.length;
+      const avgRun = convertFromBase(avgRunBase);
+      const avgRise = convertFromBase(avgRiseBase);
+      const runThreshold = comfortThresholds.run;
+      if (avgRunBase >= runThreshold.min && avgRunBase <= runThreshold.max) {
+        positives.push({
+          text: notePhrases.positive.runComfort(avgRun, unitLabel, lang),
+          className: "note-positive"
+        });
+      } else if (avgRunBase < runThreshold.min) {
+        negatives.push({
+          text: notePhrases.negative.runShort(avgRun, unitLabel, lang),
+          className: "note-negative"
+        });
+      } else {
+        negatives.push({
+          text: notePhrases.negative.runLong(avgRun, unitLabel, lang),
+          className: "note-negative"
+        });
+      }
+      const riseThreshold = comfortThresholds.rise;
+      if (avgRiseBase >= riseThreshold.min && avgRiseBase <= riseThreshold.max) {
+        positives.push({
+          text: notePhrases.positive.riseComfort(avgRise, unitLabel, lang),
+          className: "note-positive"
+        });
+      } else if (avgRiseBase < riseThreshold.min) {
+        negatives.push({
+          text: notePhrases.negative.riseShallow(avgRise, unitLabel, lang),
+          className: "note-negative"
+        });
+      } else {
+        negatives.push({
+          text: notePhrases.negative.riseTall(avgRise, unitLabel, lang),
+          className: "note-negative"
+        });
+      }
+      const hasBottom = landingRuns.bottom > 0;
+      const hasTop = landingRuns.top > 0;
+      if (hasBottom || hasTop) {
+        const bottomDisplay = hasBottom ? convertFromBase(landingRuns.bottom) : null;
+        const topDisplay = hasTop ? convertFromBase(landingRuns.top) : null;
+        positives.push({
+          text: notePhrases.positive.landings(
+            bottomDisplay,
+            topDisplay,
+            unitLabel,
+            lang,
+            {
+              bottom: translations[lang].landingBottomLabel,
+              top: translations[lang].landingTopLabel
+            }
+          ),
+          className: "note-positive"
+        });
+      }
+      const missingLabels = [];
+      if (!hasBottom) {
+        missingLabels.push(translations[lang].landingBottomLabel);
+      }
+      if (!hasTop) {
+        missingLabels.push(translations[lang].landingTopLabel);
+      }
+      if (missingLabels.length) {
+        negatives.push({
+          text: notePhrases.negative.landingsMissing(missingLabels, lang),
+          className: "note-negative"
+        });
+      }
+      buildNoteList(positiveNotesList, positives);
+      buildNoteList(negativeNotesList, negatives);
+    }
+
+    function updateUI() {
+      listEl.innerHTML = "";
+      const unitLabel = getUnitLabel();
+      const landingRuns = getLandingRuns();
+      const totalRun = points.reduce((sum, { length }) => sum + length, 0);
+      const totalRise = points.reduce((sum, { height }) => sum + height, 0);
+      totalLengthEl.textContent = `${convertFromBase(totalRun).toFixed(2)} ${unitLabel}`;
+      totalHeightEl.textContent = `${convertFromBase(totalRise).toFixed(2)} ${unitLabel}`;
+      stepCountEl.textContent = points.length;
+
+      const { run: runLabel, rise: riseLabel } = translations[currentLang].pointLabels;
+      const removeLabel = translations[currentLang].removeButton;
+      points.forEach((point, index) => {
+        const item = document.createElement("li");
+        item.innerHTML = `
+          <span>${runLabel}: ${convertFromBase(point.length).toFixed(2)} ${unitLabel}</span>
+          <span>${riseLabel}: ${convertFromBase(point.height).toFixed(2)} ${unitLabel}</span>
+        `;
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.textContent = removeLabel;
+        removeBtn.addEventListener("click", () => deletePoint(index));
+        item.appendChild(removeBtn);
+        listEl.appendChild(item);
+      });
+
+      updateNotes(landingRuns, totalRun, totalRise);
+      lastLandingRuns = landingRuns;
+      lastTotalRun = totalRun;
+      lastTotalRise = totalRise;
+      renderCanvas(landingRuns, totalRun, totalRise);
+    }
+
+    async function deletePoint(index) {
+      try {
+        const response = await fetch(`${apiBase}/${index}`, {
+          method: "DELETE"
+        });
+        const json = await response.json();
+        if (!response.ok) {
+          throw new Error(json.error || translations[currentLang].status.addError);
+        }
+        points = json.points || [];
+        updateUI();
+        showStatus(translations[currentLang].status.pointRemoved);
+      } catch (error) {
+        showStatus(error.message, true);
+      }
+    }
+
+    function renderCanvas(landingRuns = lastLandingRuns, totalRun = lastTotalRun, totalRise = lastTotalRise) {
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+      const padding = 30;
+
+      if (!points.length) {
+        ctx.fillStyle = "#94a3b8";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = '18px "Segoe UI", system-ui, sans-serif';
+        ctx.fillText(translations[currentLang].canvasEmpty, width / 2, height / 2);
+        return;
+      }
+
+      const runWithLanding = totalRun + (landingRuns?.bottom || 0) + (landingRuns?.top || 0);
+      const scaleX = (width - padding * 2) / Math.max(runWithLanding, 1);
+      const scaleY = (height - padding * 1.5) / Math.max(totalRise, 1);
+
+      let currentX = padding;
+      let currentY = height - padding;
+      ctx.beginPath();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.moveTo(currentX, currentY);
+
+      const landingLabels = [];
+      if (landingRuns?.bottom > 0) {
+        const run = Math.max(landingRuns.bottom * scaleX, 1);
+        ctx.lineTo(currentX + run, currentY);
+        currentX += run;
+        landingLabels.push({
+          text: translations[currentLang].landingBottomLabel,
+          x: currentX - run / 2,
+          y: currentY,
+          offset: 16
+        });
+      }
+
+      points.forEach(({ length, height: stepHeight }) => {
+        const run = Math.max(length * scaleX, 1);
+        const rise = Math.max(stepHeight * scaleY, 1);
+        ctx.lineTo(currentX + run, currentY);
+        currentX += run;
+        ctx.lineTo(currentX, currentY - rise);
+        currentY -= rise;
+      });
+
+      if (landingRuns?.top > 0) {
+        const run = Math.max(landingRuns.top * scaleX, 1);
+        ctx.lineTo(currentX + run, currentY);
+        currentX += run;
+        landingLabels.push({
+          text: translations[currentLang].landingTopLabel,
+          x: currentX - run / 2,
+          y: currentY,
+          offset: -16
+        });
+      }
+
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(226,232,240,0.3)";
+      ctx.lineWidth = 1;
+      const gridLines = 6;
+      for (let i = 0; i <= gridLines; i++) {
+        const x = padding + ((width - padding * 2) / gridLines) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, height - padding);
+        ctx.lineTo(x, padding / 2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#e0f2fe";
+      ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      landingLabels.forEach(({ text, x, y, offset }) => {
+        ctx.fillText(text, x, y + offset);
+      });
+    }
+
+    async function fetchPoints() {
+      try {
+        const response = await fetch(apiBase);
+        const payload = await response.json();
+        points = payload.points || [];
+        updateUI();
+      } catch (error) {
+        showStatus(`${translations[currentLang].status.loadErrorPrefix} ${error.message}`, true);
+      }
+    }
+
+    async function postPoint(payload, { skipStatus = false } = {}) {
+      try {
+        const response = await fetch(apiBase, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await response.json();
+        if (!response.ok) {
+          throw new Error(json.error || translations[currentLang].status.addError);
+        }
+        points = json.points;
+        updateUI();
+        if (!skipStatus) {
+          showStatus(translations[currentLang].status.pointAdded);
+        }
+        return true;
+      } catch (err) {
+        showStatus(err.message, true);
+        return false;
+      }
+    }
+
+    async function addLastStep() {
+      if (!points.length) {
+        showStatus(translations[currentLang].status.noPreviousStep, true);
+        return;
+      }
+      const last = points[points.length - 1];
+      await postPoint({ length: last.length, height: last.height });
+    }
+
+    async function applyTotals() {
+      if (!points.length) {
+        showStatus(translations[currentLang].status.noPointsForTotals, true);
+        return;
+      }
+      const targetRunValue = parseFloat(targetRunInput.value);
+      const targetRiseValue = parseFloat(targetRiseInput.value);
+      const hasRunTarget = !Number.isNaN(targetRunValue) && targetRunValue > 0;
+      const hasRiseTarget = !Number.isNaN(targetRiseValue) && targetRiseValue > 0;
+      if (!hasRunTarget && !hasRiseTarget) {
+        showStatus(translations[currentLang].status.invalidTotals, true);
+        return;
+      }
+
+      const totalRun = points.reduce((sum, { length }) => sum + length, 0);
+      const totalRise = points.reduce((sum, { height }) => sum + height, 0);
+      const targetRunBase = hasRunTarget ? convertToBase(targetRunValue) : totalRun;
+      const targetRiseBase = hasRiseTarget ? convertToBase(targetRiseValue) : totalRise;
+      const runRatio = totalRun > 0 ? targetRunBase / totalRun : 1;
+      const riseRatio = totalRise > 0 ? targetRiseBase / totalRise : 1;
+
+      const scaledPoints = points.map((point) => ({
+        length: point.length * runRatio,
+        height: point.height * riseRatio
+      }));
+
+      const resetResp = await fetch(`${apiBase}/reset`, { method: "POST" });
+      if (!resetResp.ok) {
+        showStatus(`${translations[currentLang].status.resetFailurePrefix} ${resetResp.statusText}`, true);
+        return;
+      }
+      points = [];
+      for (const scaled of scaledPoints) {
+        if (!(await postPoint(scaled, { skipStatus: true }))) {
+          return;
+        }
+      }
+      showStatus(translations[currentLang].status.totalsApplied);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const payload = {
+        length: convertToBase(parseFloat(form.length.value)),
+        height: convertToBase(parseFloat(form.height.value))
+      };
+      if (await postPoint(payload)) {
+        form.reset();
+        form.length.focus();
+      }
+    });
+
+    addLastStepBtn.addEventListener("click", addLastStep);
+    applyTotalsBtn.addEventListener("click", applyTotals);
+
+    resetBtn.addEventListener("click", async () => {
+      if (!points.length) {
+        showStatus(translations[currentLang].status.nothingToReset, true);
+        return;
+      }
+      try {
+        await fetch(`${apiBase}/reset`, { method: "POST" });
+        points = [];
+        updateUI();
+        showStatus(translations[currentLang].status.pointsCleared);
+      } catch (error) {
+        showStatus(`${translations[currentLang].status.resetFailurePrefix} ${error.message}`, true);
+      }
+    });
+
+    languageButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.langBtn === currentLang) {
+          return;
+        }
+        applyLanguage(button.dataset.langBtn);
+      });
+    });
+
+    unitButtons.forEach((button) => {
+      button.addEventListener("click", () => handleUnitChange(button.dataset.unitBtn));
+    });
+
+    [landingBottomInput, landingTopInput].forEach((input) => {
+      input.addEventListener("input", () => updateUI());
+    });
+
+    window.addEventListener("resize", () => {
+      adjustCanvasSize();
+      renderCanvas(lastLandingRuns, lastTotalRun, lastTotalRise);
+    });
+
+    adjustCanvasSize();
+    applyLanguage(currentLang);
+    fetchPoints();
+  </script>
+</body>
+</html>
